@@ -33,11 +33,23 @@ class RecipeService {
   final String categoriesUrl =
       "https://tokopaedi.arfani.my.id/api/categories"; //data kategori
 
-  //method get data list resep
-  Future<List<RecipeModel>> getAllRecipes({int page = 1}) async { //jadi 1 tapi ada 3 parameter, yaitu resep, search  dan kategori
+  // method gabungin getAllRecipes, searchRecipes, getRecipesByCategory
+  Future<List<RecipeModel>> fetchRecipes({
+    int page = 1,
+    String? search,
+    int? categoryId,
+  }) async {
     try {
-      final response = await dio.get("$baseUrl?page=$page");
-      print("API Response: ${response.data}");
+      final response = await dio.get(
+        "$baseUrl",
+        queryParameters: {
+          'page': page,
+          if (search != null) 'title': search,
+          if (categoryId != null) 'category_id': categoryId,
+        },
+        options: Options(headers: {'Accept': 'application/json'}),
+      );
+
       if (response.data is Map<String, dynamic> &&
           response.data.containsKey("data") &&
           response.data["data"] is Map<String, dynamic> &&
@@ -54,7 +66,7 @@ class RecipeService {
   }
 
   //method get data kategori
-  Future<List<CategoryModel>> getAllCategories() async { 
+  Future<List<CategoryModel>> getAllCategories() async {
     try {
       final response = await dio.get(categoriesUrl);
       if (response.data is List) {
@@ -66,61 +78,6 @@ class RecipeService {
     } catch (e) {
       print("Error fetching categories: $e");
       throw Exception("Failed to load categories: $e");
-    }
-  }
-
-  //method cari resep di searchbar berdasarkan parameter
-  Future<List<RecipeModel>> searchRecipes(String query) async { //jadi 1
-    try {
-      final response = await dio.get(
-        "$baseUrl",
-        queryParameters: {
-          'search': query}, //parameter
-        options: Options(headers: {'Accept': 'application/json'}),
-      );
-      print("API Search Response: ${response.data}");
-      if (response.data is Map<String, dynamic> &&
-          response.data.containsKey("data") &&
-          response.data["data"] is Map<String, dynamic> &&
-          response.data["data"].containsKey("data")) {
-        List<dynamic> recipesJson = response.data["data"]["data"];
-        return recipesJson.map((json) => RecipeModel.fromJson(json)).toList();
-      } else if (response.data is Map<String, dynamic> &&
-          response.data.containsKey("data") &&
-          response.data["data"] is List) {
-        List<dynamic> recipesJson = response.data["data"];
-        return recipesJson.map((json) => RecipeModel.fromJson(json)).toList();
-      } else {
-        print("Format respons tidak dikenali: ${response.data}");
-        throw Exception("Invalid search response format");
-      }
-    } catch (e) {
-      print("Error searching recipes: $e");
-      throw Exception("Failed to search recipes: $e");
-    }
-  }
-
-  //method get data resep berdasarkan kategori
-  Future<List<RecipeModel>> getRecipesByCategory(int categoryId) async { //jadi 1
-    try {
-      final response = await dio.get(
-        "$baseUrl",
-        queryParameters: {'category_id': categoryId}, //parameter
-        options: Options(headers: {'Accept': 'application/json'}),
-      );
-      print("API Category Filter Response: ${response.data}");
-      if (response.data is Map<String, dynamic> &&
-          response.data.containsKey("data") &&
-          response.data["data"] is Map<String, dynamic> &&
-          response.data["data"].containsKey("data")) {
-        List<dynamic> recipesJson = response.data["data"]["data"];
-        return recipesJson.map((json) => RecipeModel.fromJson(json)).toList();
-      } else {
-        throw Exception("Invalid category filter response format");
-      }
-    } catch (e) {
-      print("Error filtering recipes by category: $e");
-      throw Exception("Failed to filter recipes by category: $e");
     }
   }
 

@@ -37,16 +37,18 @@ class _HomepageState extends State<Homepage> {
     await _fetchRecipes();
   }
 
-  //mengambil daftar resep
-  Future<void> _fetchRecipes() async {
+  //mengambil data resep, kategori, pencarian
+  Future<void> _fetchRecipes({String searchQuery = '', int? categoryId}) async {
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final fetchedRecipes =
-          await _recipeService
-              .getAllRecipes(); //memanggil untuk ngambil data resep
+      final fetchedRecipes = await _recipeService.fetchRecipes(
+        search: searchQuery.isEmpty ? null : searchQuery,
+        categoryId: categoryId,
+      );
+
       setState(() {
         _recipes = fetchedRecipes;
         _isLoading = false;
@@ -71,98 +73,6 @@ class _HomepageState extends State<Homepage> {
       });
     } catch (e) {
       _showErrorSnackBar("Error loading categories");
-    }
-  }
-
-  //buat searchbar
-  Future<void> _searchRecipes(String query) async {
-    setState(() {
-      _isLoading = true;
-      _searchQuery = query;
-    });
-
-    try {
-      // If query is empty, reset to original state
-      if (query.isEmpty) {
-        if (_selectedCategory != null) {
-          await _getRecipesByCategory(_selectedCategory!);
-        } else {
-          await _fetchRecipes();
-        }
-        return;
-      }
-
-      // Fetch all recipes first
-      final allRecipes = await _recipeService.getAllRecipes();
-
-      // Filter recipes based on title (case-insensitive)
-      final searchedRecipes =
-          allRecipes
-              .where(
-                (recipe) =>
-                    recipe.title.toLowerCase().contains(query.toLowerCase()),
-              )
-              .toList();
-
-      // If a category is selected, further filter by category
-      if (_selectedCategory != null) {
-        setState(() {
-          _recipes =
-              searchedRecipes
-                  .where((recipe) => recipe.categoryId == _selectedCategory!.id)
-                  .toList();
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _recipes = searchedRecipes;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      _showErrorSnackBar("Error searching recipes");
-    }
-  }
-
-  //ngambil data resep berdasarkan kategori
-  Future<void> _getRecipesByCategory(CategoryModel category) async {
-    setState(() {
-      _isLoading = true;
-      _selectedCategory = category;
-    });
-
-    try {
-      final categoryRecipes = await _recipeService.getRecipesByCategory(
-        category.id,
-      );
-
-      // Apply search filter if there's a query
-      if (_searchQuery.isNotEmpty) {
-        setState(() {
-          _recipes =
-              categoryRecipes
-                  .where(
-                    (recipe) => recipe.title.toLowerCase().contains(
-                      _searchQuery.toLowerCase(),
-                    ),
-                  )
-                  .toList();
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _recipes = categoryRecipes;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      _showErrorSnackBar("Error filtering recipes by category");
     }
   }
 
@@ -192,10 +102,15 @@ class _HomepageState extends State<Homepage> {
                   child: TextField(
                     controller: searchController,
                     onChanged: (value) {
-                      if (value.length > 0 || value.isEmpty) {
-                        _searchRecipes(value);
-                      }
+                      setState(() {
+                        _searchQuery = value;
+                      });
+                      _fetchRecipes(
+                        searchQuery: value, 
+                        categoryId: _selectedCategory?.id,
+                      );
                     },
+
                     decoration: InputDecoration(
                       hintText: "Cari...",
                       prefixIcon: Icon(Icons.search),
@@ -247,18 +162,19 @@ class _HomepageState extends State<Homepage> {
                       spacing: 8.0,
                       runSpacing: 8.0,
                       children: [
-                        // "All" filter chip
                         FilterChip(
                           label: const Text("Semua"),
                           selected: _selectedCategory == null,
                           onSelected: (selected) {
-                            if (selected) {
-                              setState(() {
-                                _selectedCategory = null;
-                              });
-                              _searchRecipes(_searchQuery);
-                            }
+                            setState(() {
+                              _selectedCategory = null;
+                            });
+                            _fetchRecipes(
+                              searchQuery: _searchQuery,
+                              categoryId: _selectedCategory?.id,
+                            );
                           },
+
                           backgroundColor: Colors.grey.shade200,
                           selectedColor: Colors.blueGrey,
                           checkmarkColor: Colors.white,
@@ -278,15 +194,15 @@ class _HomepageState extends State<Homepage> {
                             label: Text(category.name),
                             selected: isSelected,
                             onSelected: (selected) {
-                              if (selected) {
-                                _getRecipesByCategory(category);
-                              } else {
-                                setState(() {
-                                  _selectedCategory = null;
-                                });
-                                _searchRecipes(_searchQuery);
-                              }
+                              setState(() {
+                                _selectedCategory = selected ? category : null;
+                              });
+                              _fetchRecipes(
+                                searchQuery: _searchQuery,
+                                categoryId: _selectedCategory?.id,
+                              );
                             },
+
                             backgroundColor: Colors.grey.shade200,
                             selectedColor: Colors.blueGrey,
                             checkmarkColor: Colors.white,
@@ -340,9 +256,11 @@ class _HomepageState extends State<Homepage> {
                                 ),
                               ).then((_) {
                                 if (_selectedCategory != null) {
-                                  _getRecipesByCategory(_selectedCategory!);
+                                  _fetchRecipes(
+                                    categoryId: _selectedCategory!.id,
+                                  );
                                 } else if (_searchQuery.isNotEmpty) {
-                                  _searchRecipes(_searchQuery);
+                                  _fetchRecipes(searchQuery: _searchQuery);
                                 } else {
                                   _fetchRecipes();
                                 }
@@ -422,9 +340,9 @@ class _HomepageState extends State<Homepage> {
             MaterialPageRoute(builder: (context) => AddRecipePage()),
           ).then((_) {
             if (_selectedCategory != null) {
-              _getRecipesByCategory(_selectedCategory!);
+              _fetchRecipes(categoryId: _selectedCategory!.id);
             } else if (_searchQuery.isNotEmpty) {
-              _searchRecipes(_searchQuery);
+              _fetchRecipes(searchQuery: _searchQuery);
             } else {
               _fetchRecipes();
             }

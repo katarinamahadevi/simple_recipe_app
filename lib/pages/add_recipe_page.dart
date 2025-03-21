@@ -7,7 +7,7 @@ import 'package:simple_recipe_app/models/recipe_model.dart';
 import 'package:simple_recipe_app/services/recipe_service.dart';
 
 class AddRecipePage extends StatefulWidget {
-  final RecipeModel? recipe; // Optional recipe for editing mode
+  final RecipeModel? recipe; 
   const AddRecipePage({Key? key, this.recipe}) : super(key: key);
 
   @override

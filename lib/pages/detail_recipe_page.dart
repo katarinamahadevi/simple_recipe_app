@@ -180,7 +180,7 @@ class _DetailRecipePageState extends State<DetailRecipePage> {
             ),
             TextButton(
               onPressed: () {
-                Navigator.of(dialogContext).pop(); // Close the dialog
+                Navigator.of(dialogContext).pop(); //close pop up konfirmasi
                 _deleteRecipe();
               },
               child: Text('Delete', style: TextStyle(color: Colors.red)),
